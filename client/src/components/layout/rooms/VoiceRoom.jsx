@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaMicrophone, FaMicrophoneSlash, FaHeadphones, FaHeadphonesSlash, FaSignOutAlt } from 'react-icons/fa';
+import {
+  FaMicrophone,
+  FaMicrophoneSlash,
+  FaHeadphones,
+  FaVolumeUp,
+  FaSignOutAlt
+} from 'react-icons/fa';
+
+
 import Avatar from '../ui/Avatar';
 import ChatBox from '../chat/ChatBox';
 import toast from 'react-hot-toast';
@@ -159,7 +167,7 @@ const VoiceRoom = ({ room, socket, onLeave }) => {
             } transition-colors`}
           >
             {isDeafened ? (
-              <FaHeadphonesSlash className="text-white text-xl" />
+              <FaVolumeUp className="text-white text-xl" />
             ) : (
               <FaHeadphones className="text-gray-700 text-xl" />
             )}

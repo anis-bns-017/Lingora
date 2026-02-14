@@ -13,18 +13,30 @@ import Profile from './pages/Profile';
 // Components
 import Navbar from './components/layout/Navbar';
 import PrivateRoute from './components/auth/PrivateRoute';
+import AuthGuard from './components/auth/AuthGuard';
 
 // Store actions
 import { getCurrentUser } from './store/slices/authSlice';
+import authService from './services/authService';
 
 function App() {
   const dispatch = useDispatch();
   const { isAuthenticated } = useSelector((state) => state.auth);
 
   useEffect(() => {
-    if (localStorage.getItem('token')) {
-      dispatch(getCurrentUser());
-    }
+    // Check if user is authenticated on app load
+    const checkAuth = async () => {
+      try {
+        const result = await authService.checkAuth();
+        if (result.isAuthenticated) {
+          dispatch(getCurrentUser());
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+      }
+    };
+    
+    checkAuth();
   }, [dispatch]);
 
   return (
@@ -34,13 +46,23 @@ function App() {
         <main className="container mx-auto px-4 py-8">
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/login" element={!isAuthenticated ? <Login /> : <Navigate to="/rooms" />} />
+            <Route 
+              path="/login" 
+              element={
+                <AuthGuard requireAuth={false}>
+                  <Login />
+                </AuthGuard>
+              } 
+            />
             <Route path="/rooms" element={<Rooms />} />
-            <Route path="/room/:id" element={
-              <PrivateRoute>
-                <RoomDetail />
-              </PrivateRoute>
-            } />
+            <Route 
+              path="/room/:id" 
+              element={
+                <PrivateRoute>
+                  <RoomDetail />
+                </PrivateRoute>
+              } 
+            />
             <Route path="/profile/:id" element={<Profile />} />
           </Routes>
         </main>
