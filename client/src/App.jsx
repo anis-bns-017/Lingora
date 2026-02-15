@@ -18,6 +18,7 @@ import AuthGuard from './components/auth/AuthGuard';
 // Store actions
 import { getCurrentUser } from './store/slices/authSlice';
 import authService from './services/authService';
+import VoicePractice from './pages/VoicePractice';
 
 function App() {
   const dispatch = useDispatch();
@@ -62,6 +63,7 @@ function App() {
                 </AuthGuard>
               } 
             />
+            <Route path="/voice-practice" element={<VoicePractice />} />
             <Route path="/rooms" element={<Rooms />} />
             <Route 
               path="/room/:id" 

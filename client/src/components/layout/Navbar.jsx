@@ -1,7 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { FaComments, FaUser, FaSignOutAlt, FaBars, FaTimes, FaGlobe, FaChevronDown, FaCompass } from 'react-icons/fa';
+import { 
+  FaComments, 
+  FaUser, 
+  FaSignOutAlt, 
+  FaBars, 
+  FaTimes, 
+  FaGlobe, 
+  FaChevronDown, 
+  FaCompass,
+  FaMicrophone,
+  FaChartLine
+} from 'react-icons/fa';
 import { logout } from '../../store/slices/authSlice';
 import toast from 'react-hot-toast';
 
@@ -54,6 +65,12 @@ const Navbar = () => {
 
   const isActive = (path) => location.pathname === path;
 
+  const navLinks = [
+    { path: '/rooms', label: 'Explore Rooms', icon: FaCompass },
+    { path: '/voice-practice', label: 'Voice Practice', icon: FaMicrophone },
+    { path: '/analytics', label: 'Analytics', icon: FaChartLine },
+  ];
+
   return (
     <nav className={`fixed w-full z-50 transition-all duration-500 ${
       scrolled 
@@ -79,25 +96,31 @@ const Navbar = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-1">
-            {/* Navigation Links with improved styling */}
-            <Link
-              to="/rooms"
-              className={`relative px-4 py-2.5 text-sm font-semibold transition-all duration-300 group ${
-                isActive('/rooms') 
-                  ? 'text-indigo-600' 
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <span className="relative z-10 flex items-center gap-2">
-                <FaCompass className={`text-base transition-transform duration-300 ${
-                  isActive('/rooms') ? 'rotate-45' : 'group-hover:rotate-45'
-                }`} />
-                Explore Rooms
-              </span>
-              {isActive('/rooms') && (
-                <span className="absolute inset-0 bg-indigo-50 rounded-2xl -z-0 animate-in fade-in" />
-              )}
-            </Link>
+            {/* Dynamic Navigation Links */}
+            {navLinks.map((link) => {
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className={`relative px-4 py-2.5 text-sm font-semibold transition-all duration-300 group ${
+                    isActive(link.path) 
+                      ? 'text-indigo-600' 
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <span className="relative z-10 flex items-center gap-2">
+                    <Icon className={`text-base transition-transform duration-300 ${
+                      isActive(link.path) ? 'rotate-12' : 'group-hover:rotate-12'
+                    }`} />
+                    {link.label}
+                  </span>
+                  {isActive(link.path) && (
+                    <span className="absolute inset-0 bg-indigo-50 rounded-2xl -z-0 animate-in fade-in" />
+                  )}
+                </Link>
+              );
+            })}
 
             {isAuthenticated ? (
               <div className="relative ml-2" ref={userMenuRef}>
@@ -134,6 +157,7 @@ const Navbar = () => {
                       <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                     </div>
                     
+                    {/* Profile Link */}
                     <Link
                       to={`/profile/${user?._id}`}
                       className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-indigo-50 hover:to-white group transition-all"
@@ -147,7 +171,27 @@ const Navbar = () => {
                         <p className="text-xs text-gray-500">View your profile</p>
                       </div>
                     </Link>
+
+                    {/* Voice Practice Stats (Quick View) */}
+                    <div className="px-4 py-3 mx-2 my-1 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl">
+                      <p className="text-xs font-medium text-purple-600 mb-2">Today's Practice</p>
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="text-lg font-bold text-gray-900">3</p>
+                          <p className="text-xs text-gray-500">Recordings</p>
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-gray-900">78%</p>
+                          <p className="text-xs text-gray-500">Avg. Score</p>
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-gray-900">12m</p>
+                          <p className="text-xs text-gray-500">Time</p>
+                        </div>
+                      </div>
+                    </div>
                     
+                    {/* Logout Button */}
                     <button
                       onClick={handleLogout}
                       className="flex w-full items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-gradient-to-r hover:from-red-50 hover:to-white group transition-all"
@@ -205,16 +249,36 @@ const Navbar = () => {
       {isMobileOpen && (
         <div className="md:hidden absolute top-full left-0 w-full bg-white/95 backdrop-blur-xl border-t border-gray-100 shadow-2xl animate-in slide-in-from-top duration-300">
           <div className="px-4 py-6 space-y-2">
-            <Link
-              to="/rooms"
-              className="flex items-center gap-3 px-4 py-4 text-base font-bold text-gray-700 hover:bg-indigo-50 rounded-2xl transition-all group"
-              onClick={() => setIsMobileOpen(false)}
-            >
-              <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center group-hover:bg-indigo-200 transition-colors">
-                <FaCompass className="text-indigo-600" />
-              </div>
-              <span>Explore Rooms</span>
-            </Link>
+            {/* Dynamic Mobile Navigation Links */}
+            {navLinks.map((link) => {
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className={`flex items-center gap-3 px-4 py-4 text-base font-bold rounded-2xl transition-all group ${
+                    isActive(link.path)
+                      ? 'bg-indigo-50 text-indigo-600'
+                      : 'text-gray-700 hover:bg-indigo-50 hover:text-indigo-600'
+                  }`}
+                  onClick={() => setIsMobileOpen(false)}
+                >
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${
+                    isActive(link.path)
+                      ? 'bg-indigo-200'
+                      : 'bg-indigo-100 group-hover:bg-indigo-200'
+                  }`}>
+                    <Icon className={`text-lg ${
+                      isActive(link.path) ? 'text-indigo-600' : 'text-indigo-600'
+                    }`} />
+                  </div>
+                  <span>{link.label}</span>
+                  {isActive(link.path) && (
+                    <Badge variant="primary" size="sm" className="ml-auto">Active</Badge>
+                  )}
+                </Link>
+              );
+            })}
             
             <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent my-4" />
             
@@ -223,6 +287,25 @@ const Navbar = () => {
                 <div className="px-4 py-3">
                   <p className="text-sm text-gray-500">Signed in as</p>
                   <p className="font-bold text-gray-900">{user?.username}</p>
+                </div>
+                
+                {/* Voice Practice Quick Stats for Mobile */}
+                <div className="mx-4 p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-2xl mb-2">
+                  <p className="text-sm font-medium text-purple-600 mb-3">Today's Progress</p>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div>
+                      <p className="text-lg font-bold text-gray-900">3</p>
+                      <p className="text-xs text-gray-500">Rec</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-gray-900">78%</p>
+                      <p className="text-xs text-gray-500">Score</p>
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold text-gray-900">12m</p>
+                      <p className="text-xs text-gray-500">Time</p>
+                    </div>
+                  </div>
                 </div>
                 
                 <Link
@@ -276,5 +359,20 @@ const Navbar = () => {
     </nav>
   );
 };
+
+// Tab Button Component for the navbar (if needed)
+const TabButton = ({ active, onClick, icon: Icon, label }) => (
+  <button
+    onClick={onClick}
+    className={`flex items-center gap-2 px-6 py-3 text-sm font-semibold transition-all duration-300 border-b-2 ${
+      active
+        ? 'border-indigo-600 text-indigo-600'
+        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+    }`}
+  >
+    <Icon className={active ? 'text-indigo-600' : 'text-gray-400'} size={18} />
+    {label}
+  </button>
+);
 
 export default Navbar;
