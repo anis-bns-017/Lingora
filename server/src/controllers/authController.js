@@ -4,38 +4,65 @@ import createError from 'http-errors';
 
 export const register = async (req, res, next) => {
   try {
+    console.log('Registration attempt with data:', { 
+      ...req.body, 
+      password: '[REDACTED]' 
+    });
+
     const { username, email, password, nativeLanguage } = req.body;
-    
-    // Check if user exists
-    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
-    if (existingUser) {
-      throw createError(400, 'User already exists');
+
+    // Validate required fields
+    if (!username || !email || !password || !nativeLanguage) {
+      throw createError(400, 'Please provide all required fields');
     }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ 
+      $or: [{ email }, { username }] 
+    });
     
+    if (existingUser) {
+      if (existingUser.email === email) {
+        throw createError(400, 'Email already registered');
+      }
+      if (existingUser.username === username) {
+        throw createError(400, 'Username already taken');
+      }
+    }
+
     // Create user
     const user = await User.create({
       username,
       email,
       password,
-      nativeLanguage
+      nativeLanguage,
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random`
     });
-    
+
+    console.log('User created successfully:', user._id);
+
     // Generate token
     const token = generateToken(user._id);
     setTokenCookie(res, token);
-    
+
+    // Return user data without password
+    const userData = {
+      _id: user._id,
+      username: user.username,
+      email: user.email,
+      avatar: user.avatar,
+      nativeLanguage: user.nativeLanguage,
+      learningLanguages: user.learningLanguages || [],
+      role: user.role,
+      token
+    };
+
     res.status(201).json({
       success: true,
-      data: {
-        _id: user._id,
-        username: user.username,
-        email: user.email,
-        avatar: user.avatar,
-        nativeLanguage: user.nativeLanguage,
-        token
-      }
+      data: userData
     });
   } catch (error) {
+    console.error('Registration error:', error);
     next(error);
   }
 };

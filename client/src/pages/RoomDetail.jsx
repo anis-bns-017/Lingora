@@ -1,11 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchRoom, joinExistingRoom, leaveCurrentRoom, clearCurrentRoom } from '../store/slices/roomSlice';
+import { 
+  fetchRoom, 
+  joinRoom,  // Changed from joinExistingRoom to joinRoom
+  leaveRoom,  // Changed from leaveCurrentRoom to leaveRoom
+  clearCurrentRoom 
+} from '../store/slices/roomSlice';
 import VoiceRoom from '../components/rooms/VoiceRoom';
 import Spinner from '../components/ui/Spinner';
 import Button from '../components/ui/Button';
-import { FaLock, FaUsers, FaArrowLeft } from 'react-icons/fa';
+import { Lock, Users, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import socketService from '../services/socketService';
 
@@ -40,7 +45,7 @@ const RoomDetail = () => {
         return;
       }
 
-      const result = await dispatch(joinExistingRoom({ 
+      const result = await dispatch(joinRoom({  // Using joinRoom instead of joinExistingRoom
         id, 
         password: currentRoom?.isPrivate ? password : null 
       })).unwrap();
@@ -61,7 +66,7 @@ const RoomDetail = () => {
 
   const handleLeaveRoom = async () => {
     try {
-      await dispatch(leaveCurrentRoom(id)).unwrap();
+      await dispatch(leaveRoom(id)).unwrap();  // Using leaveRoom instead of leaveCurrentRoom
       
       // Leave room via socket
       socketService.emit('leave-room', { roomId: id });
@@ -88,7 +93,7 @@ const RoomDetail = () => {
       <div className="text-center py-12">
         <p className="text-red-600 text-lg">{error}</p>
         <Button onClick={() => navigate('/rooms')} className="mt-4">
-          <FaArrowLeft className="inline mr-2" />
+          <ArrowLeft className="inline mr-2" size={18} />
           Back to Rooms
         </Button>
       </div>
@@ -117,7 +122,7 @@ const RoomDetail = () => {
         onClick={() => navigate('/rooms')}
         className="flex items-center text-gray-600 hover:text-gray-800 mb-6"
       >
-        <FaArrowLeft className="mr-2" />
+        <ArrowLeft className="mr-2" size={18} />
         Back to Rooms
       </button>
 
@@ -136,14 +141,14 @@ const RoomDetail = () => {
                 </span>
                 {currentRoom.isPrivate && (
                   <span className="flex items-center space-x-1">
-                    <FaLock />
+                    <Lock size={14} />
                     <span>Private Room</span>
                   </span>
                 )}
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <FaUsers className="text-xl" />
+              <Users size={20} />
               <span>{currentRoom.participants?.length || 0} / {currentRoom.maxParticipants}</span>
             </div>
           </div>

@@ -1,88 +1,73 @@
-import api from './api';
+import { post, get } from './api';
 
 const authService = {
   // Register new user
   register: async (userData) => {
-    const response = await api.post('/auth/register', userData);
-    return response.data;
+    try {
+      console.log('AuthService.register called with:', userData);
+      const response = await post('/auth/register', userData);
+      console.log('AuthService.register response:', response);
+      return response;
+    } catch (error) {
+      console.error('AuthService.register error:', error);
+      throw error; // Re-throw to be handled by the component
+    }
   },
 
   // Login user
   login: async (credentials) => {
-    const response = await api.post('/auth/login', credentials);
-    return response.data;
+    try {
+      console.log('AuthService.login called with:', credentials);
+      const response = await post('/auth/login', credentials);
+      console.log('AuthService.login response:', response);
+      return response;
+    } catch (error) {
+      console.error('AuthService.login error:', error);
+      throw error;
+    }
   },
 
   // Logout user
   logout: async () => {
-    const response = await api.post('/auth/logout');
-    return response.data;
+    try {
+      const response = await post('/auth/logout');
+      return response;
+    } catch (error) {
+      console.error('AuthService.logout error:', error);
+      throw error;
+    }
   },
 
   // Get current user profile
   getMe: async () => {
-    const response = await api.get('/auth/me');
-    return response.data;
+    try {
+      const response = await get('/auth/me');
+      return response;
+    } catch (error) {
+      console.error('AuthService.getMe error:', error);
+      throw error;
+    }
   },
 
   // Forgot password
   forgotPassword: async (email) => {
-    const response = await api.post('/auth/forgot-password', { email });
-    return response.data;
-  },
-
-  // Reset password
-  resetPassword: async (token, password) => {
-    const response = await api.post('/auth/reset-password', { token, password });
-    return response.data;
-  },
-
-  // Change password (when logged in)
-  changePassword: async (currentPassword, newPassword) => {
-    const response = await api.put('/auth/change-password', {
-      currentPassword,
-      newPassword
-    });
-    return response.data;
-  },
-
-  // Verify email
-  verifyEmail: async (token) => {
-    const response = await api.get(`/auth/verify-email/${token}`);
-    return response.data;
-  },
-
-  // Resend verification email
-  resendVerification: async () => {
-    const response = await api.post('/auth/resend-verification');
-    return response.data;
-  },
-
-  // Refresh token
-  refreshToken: async () => {
-    const response = await api.post('/auth/refresh-token');
-    return response.data;
-  },
-
-  // Check if user is authenticated (based on cookie)
-  checkAuth: async () => {
     try {
-      const response = await api.get('/auth/check');
-      return response.data;
-    } catch {
-      return { isAuthenticated: false };
+      const response = await post('/auth/forgot-password', { email });
+      return response;
+    } catch (error) {
+      console.error('AuthService.forgotPassword error:', error);
+      throw error;
     }
   },
 
-  // Social login URLs
-  getSocialLoginUrl: (provider) => {
-    return `${import.meta.env.VITE_API_URL}/auth/${provider}`;
-  },
-
-  // Handle OAuth callback
-  handleOAuthCallback: async (provider, code) => {
-    const response = await api.post(`/auth/${provider}/callback`, { code });
-    return response.data;
+  // Check if user is authenticated
+  checkAuth: async () => {
+    try {
+      const response = await get('/auth/check');
+      return response;
+    } catch {
+      return { isAuthenticated: false };
+    }
   }
 };
 

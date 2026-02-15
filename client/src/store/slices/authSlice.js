@@ -11,17 +11,19 @@ export const login = createAsyncThunk(
     } catch (error) {
       return rejectWithValue(error.response?.data?.message || 'Login failed');
     }
-  }
+  } 
 );
 
 export const register = createAsyncThunk(
   'auth/register',
   async (userData, { rejectWithValue }) => {
+    console.log("userData: ", userData);
     try {
       const response = await authService.register(userData);
+      console.log("here is: ", response);
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response?.data?.message || 'Registration failed');
+      return rejectWithValue(error.response?.data?.message || 'I am anis failed');
     }
   }
 );

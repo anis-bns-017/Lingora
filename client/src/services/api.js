@@ -20,24 +20,26 @@ const processQueue = (error, token = null) => {
 
 const api = axios.create({
   baseURL: API_URL,
-  withCredentials: true, // Important for cookies
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 seconds timeout
+  timeout: 10000,
 });
 
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    // No token needed - it's in HTTP-only cookie
-    if (import.meta.env.DEV) {
-      console.log(`🚀 ${config.method.toUpperCase()} ${config.url}`, config);
-    }
+    // Always log in development
+    console.log(`🚀 ${config.method?.toUpperCase() || 'UNKNOWN'} ${config.url}`, {
+      data: config.data,
+      params: config.params,
+      headers: config.headers
+    });
     return config;
   },
   (error) => {
-    console.error('Request error:', error);
+    console.error('📤 Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
@@ -45,25 +47,58 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
-    if (import.meta.env.DEV) {
-      console.log(`✅ ${response.config.method.toUpperCase()} ${response.config.url}`, response.data);
-    }
+    console.log(`✅ ${response.config.method?.toUpperCase() || 'UNKNOWN'} ${response.config.url}`, response.data);
     return response;
   },
   async (error) => {
-    const originalRequest = error.config;
-
-    if (import.meta.env.DEV) {
-      console.error('❌ Response error:', {
+    // Log the complete error object
+    console.error('❌ Response error details:', {
+      message: error.message,
+      code: error.code,
+      config: {
         url: error.config?.url,
         method: error.config?.method,
+        baseURL: error.config?.baseURL,
+        timeout: error.config?.timeout
+      },
+      response: {
         status: error.response?.status,
-        data: error.response?.data
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        headers: error.response?.headers
+      },
+      request: error.request ? 'Request was made but no response received' : 'No request made'
+    });
+
+    // Network error - no response received
+    if (!error.response) {
+      if (error.code === 'ECONNABORTED') {
+        console.error('⏱️ Request timeout - server took too long to respond');
+        return Promise.reject({
+          message: 'Request timeout. Please check if the server is running.',
+          original: error
+        });
+      }
+      
+      if (error.code === 'ERR_NETWORK') {
+        console.error('🌐 Network error - cannot reach server');
+        return Promise.reject({
+          message: 'Cannot connect to server. Please check if the backend is running at ' + API_URL,
+          original: error
+        });
+      }
+      
+      console.error('❓ Unknown network error:', error.message);
+      return Promise.reject({
+        message: 'Network error. Please try again.',
+        original: error
       });
     }
 
+    const originalRequest = error.config;
+
     // Handle token expiration (401) - try to refresh
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response?.status === 401 && !originalRequest?._retry) {
       if (isRefreshing) {
         // If already refreshing, queue this request
         return new Promise((resolve, reject) => {
@@ -83,17 +118,19 @@ api.interceptors.response.use(
       try {
         // Try to refresh token using HTTP-only cookie
         const response = await axios.post(`${API_URL}/auth/refresh-token`, {}, {
-          withCredentials: true
+          withCredentials: true,
+          timeout: 5000
         });
         
-        if (response.data.success) {
+        if (response.data?.success) {
           processQueue(null);
           return api(originalRequest);
         }
       } catch (refreshError) {
+        console.error('🔄 Token refresh failed:', refreshError);
         processQueue(refreshError, null);
         
-        // If refresh fails, redirect to login
+        // Only redirect if not on login page
         if (!window.location.pathname.includes('/login')) {
           window.location.href = '/login';
         }
@@ -104,58 +141,93 @@ api.interceptors.response.use(
       }
     }
 
-    // Handle forbidden (403)
-    if (error.response?.status === 403) {
-      console.error('Access forbidden');
+    // Handle specific HTTP status codes
+    switch (error.response?.status) {
+      case 400:
+        console.error('❌ Bad request:', error.response.data);
+        return Promise.reject(error.response.data?.message || 'Invalid request');
+      
+      case 401:
+        console.error('🔒 Unauthorized:', error.response.data);
+        return Promise.reject(error.response.data?.message || 'Authentication required');
+      
+      case 403:
+        console.error('🚫 Forbidden:', error.response.data);
+        return Promise.reject(error.response.data?.message || 'Access denied');
+      
+      case 404:
+        console.error('🔍 Not found:', error.response.data);
+        return Promise.reject(error.response.data?.message || 'Resource not found');
+      
+      case 409:
+        console.error('⚔️ Conflict:', error.response.data);
+        return Promise.reject(error.response.data?.message || 'Resource already exists');
+      
+      case 422:
+        console.error('📋 Validation error:', error.response.data);
+        return Promise.reject(error.response.data?.message || 'Validation failed');
+      
+      case 429:
+        console.error('⏳ Too many requests:', error.response.data);
+        return Promise.reject('Too many requests. Please try again later.');
+      
+      case 500:
+        console.error('💥 Server error:', error.response.data);
+        return Promise.reject(error.response.data?.message || 'Internal server error');
+      
+      default:
+        return Promise.reject(error.response?.data?.message || 'An unexpected error occurred');
     }
-
-    // Handle not found (404)
-    if (error.response?.status === 404) {
-      console.error('Resource not found');
-    }
-
-    // Handle server errors (500)
-    if (error.response?.status >= 500) {
-      console.error('Server error');
-    }
-
-    // Handle network errors
-    if (error.code === 'ECONNABORTED') {
-      console.error('Request timeout');
-    }
-
-    if (!error.response) {
-      console.error('Network error - no response');
-    }
-
-    return Promise.reject(error);
   }
 );
 
-// Helper methods for common requests
+// Helper methods with better error handling
 export const get = async (url, params = {}) => {
-  const response = await api.get(url, { params });
-  return response.data;
+  try {
+    const response = await api.get(url, { params });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
 };
 
 export const post = async (url, data = {}) => {
-  const response = await api.post(url, data);
-  return response.data;
+  try {
+    console.log(`📤 POST to ${url} with data:`, data);
+    const response = await api.post(url, data);
+    console.log(`📥 POST response from ${url}:`, response.data);
+    return response.data;
+  } catch (error) {
+    console.error(`📤 POST error for ${url}:`, error);
+    throw error;
+  }
 };
 
 export const put = async (url, data = {}) => {
-  const response = await api.put(url, data);
-  return response.data;
+  try {
+    const response = await api.put(url, data);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
 };
 
 export const patch = async (url, data = {}) => {
-  const response = await api.patch(url, data);
-  return response.data;
+  try {
+    const response = await api.patch(url, data);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
 };
 
 export const del = async (url) => {
-  const response = await api.delete(url);
-  return response.data;
+  try {
+    const response = await api.delete(url);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
 };
 
 export default api;
