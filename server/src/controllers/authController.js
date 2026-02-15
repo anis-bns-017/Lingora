@@ -109,6 +109,21 @@ export const login = async (req, res, next) => {
   }
 };
 
+export const checkAuth = async (req, res, next) => {
+  // The protect middleware already verifies the token
+  // If we get here, the user is authenticated
+  const user = await User.findById(req.user._id)
+    .select('-password')
+    .populate('followers', 'username avatar')
+    .populate('following', 'username avatar');
+
+  res.json({
+    success: true,
+    isAuthenticated: true,
+    data: user
+  });
+};
+
 export const logout = async (req, res, next) => {
   try {
     if (req.user) {

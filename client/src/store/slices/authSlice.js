@@ -75,6 +75,17 @@ export const resetPassword = createAsyncThunk(
     }
   }
 );
+export const checkAuth = createAsyncThunk(
+  'auth/checkAuth',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await authService.checkAuth();
+      return response.data;
+    } catch (error) {
+      return rejectWithValue('Not authenticated');
+    }
+  }
+);
 
 export const refreshToken = createAsyncThunk(
   'auth/refreshToken',

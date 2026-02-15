@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 const Tabs = ({ tabs, defaultTab, onChange, className = '' }) => {
-  const [activeTab, setActiveTab] = useState(defaultTab || tabs[0]?.id);
+  const [activeTab, setActiveTab] = useState(defaultTab || tabs?.[0]?.id);
 
   const handleTabClick = (tabId) => {
     setActiveTab(tabId);

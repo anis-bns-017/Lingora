@@ -54,6 +54,14 @@ function App() {
                 </AuthGuard>
               } 
             />
+            <Route 
+              path="/login" 
+              element={
+                <AuthGuard requireAuth={false}>
+                  <Login />
+                </AuthGuard>
+              } 
+            />
             <Route path="/rooms" element={<Rooms />} />
             <Route 
               path="/room/:id" 
