@@ -99,9 +99,14 @@ export const roomValidations = {
 
   joinRoom: [
     body('password')
-      .optional()
+      .optional({ nullable: true }) // This allows null, undefined, or empty
       .isString()
       .withMessage('Password must be a string')
+      .custom((value) => {
+        // If it's a private room, password must be provided
+        // You might need to access the room data here
+        return true;
+      })
   ],
 
   updateParticipantRole: [

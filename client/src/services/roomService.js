@@ -1,9 +1,9 @@
-import api from './api';
+import api from "./api";
 
 const roomService = {
   // Get all rooms
   getRooms: async (params = {}) => {
-    const response = await api.get('/rooms', { params });
+    const response = await api.get("/rooms", { params });
     return response.data;
   },
 
@@ -15,7 +15,7 @@ const roomService = {
 
   // Create room
   createRoom: async (roomData) => {
-    const response = await api.post('/rooms', roomData);
+    const response = await api.post("/rooms", roomData);
     return response.data;
   },
 
@@ -33,10 +33,14 @@ const roomService = {
 
   // Join room
   joinRoom: async (id, password = null) => {
-    const response = await api.post(`/rooms/${id}/join`, { password });
+    // Only include password in the body if it's provided
+    const data = {};
+    if (password) {
+      data.password = password;
+    }
+    const response = await api.post(`/rooms/${id}/join`, data);
     return response.data;
   },
-
   // Leave room
   leaveRoom: async (id) => {
     const response = await api.post(`/rooms/${id}/leave`);
@@ -45,7 +49,10 @@ const roomService = {
 
   // Update participant role
   updateParticipantRole: async (roomId, userId, role) => {
-    const response = await api.put(`/rooms/${roomId}/participants/${userId}/role`, { role });
+    const response = await api.put(
+      `/rooms/${roomId}/participants/${userId}/role`,
+      { role },
+    );
     return response.data;
   },
 
@@ -57,15 +64,15 @@ const roomService = {
 
   // Get active rooms
   getActiveRooms: async () => {
-    const response = await api.get('/rooms/active');
+    const response = await api.get("/rooms/active");
     return response.data;
   },
 
   // Search rooms
   searchRooms: async (params) => {
-    const response = await api.get('/rooms/search', { params });
+    const response = await api.get("/rooms/search", { params });
     return response.data;
-  }
+  },
 };
 
 export default roomService;

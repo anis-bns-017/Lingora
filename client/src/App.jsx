@@ -7,7 +7,6 @@ import { Toaster } from 'react-hot-toast';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Rooms from './pages/Rooms';
-import RoomDetail from './pages/RoomDetail';
 import Profile from './pages/Profile';
 import VoicePractice from './pages/VoicePractice';
 
@@ -20,6 +19,7 @@ import AuthGuard from './components/auth/AuthGuard';
 import { getCurrentUser } from './store/slices/authSlice';
 import authService from './services/authService';
 import Spinner from './components/ui/Spinner';
+import RoomDetail from './components/room/RoomDetail/RoomDetail';
 
 function App() {
   const dispatch = useDispatch();

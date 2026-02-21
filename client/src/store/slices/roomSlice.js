@@ -62,10 +62,12 @@ export const deleteRoom = createAsyncThunk(
   }
 );
 
+// ✅ FIXED: joinRoom - password is optional
 export const joinRoom = createAsyncThunk(
   'rooms/joinRoom',
   async ({ id, password }, { rejectWithValue }) => {
     try {
+      // Only pass password if it exists
       const response = await roomService.joinRoom(id, password);
       return response.data;
     } catch (error) {
@@ -155,6 +157,7 @@ const initialState = {
   searchResults: [],
   isLoading: false,
   error: null,
+  successMessage: null, // ✅ Added for better UX
   pagination: {
     page: 1,
     limit: 10,
@@ -184,6 +187,9 @@ const roomSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    clearSuccessMessage: (state) => { // ✅ New reducer
+      state.successMessage = null;
+    },
     setFilters: (state, action) => {
       state.filters = { ...state.filters, ...action.payload };
     },
@@ -194,10 +200,13 @@ const roomSlice = createSlice({
     userJoined: (state, action) => {
       if (state.currentRoom && state.currentRoom._id === action.payload.roomId) {
         // Add participant if not already in list
-        const exists = state.currentRoom.participants.some(
+        const exists = state.currentRoom.participants?.some(
           p => p.user?._id === action.payload.user._id
         );
         if (!exists) {
+          if (!state.currentRoom.participants) {
+            state.currentRoom.participants = [];
+          }
           state.currentRoom.participants.push({
             user: action.payload.user,
             role: 'listener',
@@ -209,15 +218,15 @@ const roomSlice = createSlice({
     },
     userLeft: (state, action) => {
       if (state.currentRoom && state.currentRoom._id === action.payload.roomId) {
-        state.currentRoom.participants = state.currentRoom.participants.filter(
+        state.currentRoom.participants = state.currentRoom.participants?.filter(
           p => p.user?._id !== action.payload.userId
-        );
+        ) || [];
         state.socketEvents.userLeft = action.payload;
       }
     },
     participantRoleUpdated: (state, action) => {
       if (state.currentRoom && state.currentRoom._id === action.payload.roomId) {
-        const participant = state.currentRoom.participants.find(
+        const participant = state.currentRoom.participants?.find(
           p => p.user?._id === action.payload.userId
         );
         if (participant) {
@@ -238,7 +247,8 @@ const roomSlice = createSlice({
     },
     clearSocketEvents: (state) => {
       state.socketEvents = initialState.socketEvents;
-    }
+    },
+    resetRoomState: () => initialState // ✅ New: reset everything
   },
   extraReducers: (builder) => {
     builder
@@ -277,11 +287,13 @@ const roomSlice = createSlice({
       .addCase(createRoom.pending, (state) => {
         state.isLoading = true;
         state.error = null;
+        state.successMessage = null;
       })
       .addCase(createRoom.fulfilled, (state, action) => {
         state.isLoading = false;
         state.rooms.unshift(action.payload);
         state.currentRoom = action.payload;
+        state.successMessage = 'Room created successfully!';
       })
       .addCase(createRoom.rejected, (state, action) => {
         state.isLoading = false;
@@ -292,6 +304,7 @@ const roomSlice = createSlice({
       .addCase(updateRoom.pending, (state) => {
         state.isLoading = true;
         state.error = null;
+        state.successMessage = null;
       })
       .addCase(updateRoom.fulfilled, (state, action) => {
         state.isLoading = false;
@@ -302,6 +315,7 @@ const roomSlice = createSlice({
         if (index !== -1) {
           state.rooms[index] = action.payload;
         }
+        state.successMessage = 'Room updated successfully!';
       })
       .addCase(updateRoom.rejected, (state, action) => {
         state.isLoading = false;
@@ -312,6 +326,7 @@ const roomSlice = createSlice({
       .addCase(deleteRoom.pending, (state) => {
         state.isLoading = true;
         state.error = null;
+        state.successMessage = null;
       })
       .addCase(deleteRoom.fulfilled, (state, action) => {
         state.isLoading = false;
@@ -319,13 +334,14 @@ const roomSlice = createSlice({
         if (state.currentRoom?._id === action.payload.id) {
           state.currentRoom = null;
         }
+        state.successMessage = 'Room deleted successfully!';
       })
       .addCase(deleteRoom.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload;
       })
 
-      // Join Room
+      // ✅ FIXED: Join Room - properly handle response
       .addCase(joinRoom.pending, (state) => {
         state.isLoading = true;
         state.error = null;
@@ -333,6 +349,7 @@ const roomSlice = createSlice({
       .addCase(joinRoom.fulfilled, (state, action) => {
         state.isLoading = false;
         state.currentRoom = action.payload;
+        state.successMessage = 'Successfully joined room!';
       })
       .addCase(joinRoom.rejected, (state, action) => {
         state.isLoading = false;
@@ -343,12 +360,14 @@ const roomSlice = createSlice({
       .addCase(leaveRoom.pending, (state) => {
         state.isLoading = true;
         state.error = null;
+        state.successMessage = null;
       })
       .addCase(leaveRoom.fulfilled, (state, action) => {
         state.isLoading = false;
         if (state.currentRoom?._id === action.payload.id) {
           state.currentRoom = null;
         }
+        state.successMessage = 'Left room successfully!';
       })
       .addCase(leaveRoom.rejected, (state, action) => {
         state.isLoading = false;
@@ -356,34 +375,76 @@ const roomSlice = createSlice({
       })
 
       // Update Participant Role
+      .addCase(updateParticipantRole.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
       .addCase(updateParticipantRole.fulfilled, (state, action) => {
+        state.isLoading = false;
         if (state.currentRoom && state.currentRoom._id === action.payload.roomId) {
-          const participant = state.currentRoom.participants.find(
+          const participant = state.currentRoom.participants?.find(
             p => p.user?._id === action.payload.userId
           );
           if (participant) {
             participant.role = action.payload.role;
           }
         }
+        state.successMessage = `User role updated to ${action.payload.role}`;
+      })
+      .addCase(updateParticipantRole.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
       })
 
       // Fetch Active Rooms
+      .addCase(fetchActiveRooms.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
       .addCase(fetchActiveRooms.fulfilled, (state, action) => {
+        state.isLoading = false;
         state.activeRooms = action.payload;
+      })
+      .addCase(fetchActiveRooms.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
       })
 
       // Search Rooms
+      .addCase(searchRooms.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
       .addCase(searchRooms.fulfilled, (state, action) => {
+        state.isLoading = false;
         state.searchResults = action.payload;
+      })
+      .addCase(searchRooms.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
       })
 
       // Fetch My Rooms
+      .addCase(fetchMyRooms.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
       .addCase(fetchMyRooms.fulfilled, (state, action) => {
+        state.isLoading = false;
         state.myRooms = action.payload;
+      })
+      .addCase(fetchMyRooms.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
       })
 
       // Toggle Room Status
+      .addCase(toggleRoomStatus.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
       .addCase(toggleRoomStatus.fulfilled, (state, action) => {
+        state.isLoading = false;
         if (state.currentRoom?._id === action.payload._id) {
           state.currentRoom.isActive = action.payload.isActive;
         }
@@ -391,6 +452,11 @@ const roomSlice = createSlice({
         if (index !== -1) {
           state.rooms[index].isActive = action.payload.isActive;
         }
+        state.successMessage = `Room ${action.payload.isActive ? 'activated' : 'deactivated'}`;
+      })
+      .addCase(toggleRoomStatus.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload;
       });
   }
 });
@@ -400,41 +466,54 @@ export const selectAllRooms = (state) => state.rooms.rooms;
 export const selectCurrentRoom = (state) => state.rooms.currentRoom;
 export const selectActiveRooms = (state) => state.rooms.activeRooms;
 export const selectMyRooms = (state) => state.rooms.myRooms;
+export const selectSearchResults = (state) => state.rooms.searchResults;
 export const selectRoomsLoading = (state) => state.rooms.isLoading;
 export const selectRoomsError = (state) => state.rooms.error;
+export const selectRoomsSuccess = (state) => state.rooms.successMessage;
 export const selectRoomsPagination = (state) => state.rooms.pagination;
 export const selectRoomFilters = (state) => state.rooms.filters;
 export const selectRoomByLanguage = (state, language) => 
-  state.rooms.rooms.filter(room => room.language === language);
+  state.rooms.rooms?.filter(room => room.language === language) || [];
 export const selectRoomByTopic = (state, topic) => 
-  state.rooms.rooms.filter(room => room.topic === topic);
+  state.rooms.rooms?.filter(room => room.topic === topic) || [];
 export const selectRoomsByHost = (state, hostId) => 
-  state.rooms.rooms.filter(room => room.host?._id === hostId);
+  state.rooms.rooms?.filter(room => room.host?._id === hostId) || [];
 export const selectParticipantCount = (state, roomId) => {
-  const room = state.rooms.rooms.find(r => r._id === roomId);
+  const room = state.rooms.rooms?.find(r => r._id === roomId);
   return room?.participants?.length || 0;
 };
 export const selectIsParticipant = (state, userId) => {
-  if (!state.rooms.currentRoom) return false;
+  if (!state.rooms.currentRoom || !state.rooms.currentRoom.participants) return false;
   return state.rooms.currentRoom.participants.some(p => p.user?._id === userId);
 };
 export const selectUserRole = (state, userId) => {
-  if (!state.rooms.currentRoom) return null;
+  if (!state.rooms.currentRoom || !state.rooms.currentRoom.participants) return null;
   const participant = state.rooms.currentRoom.participants.find(p => p.user?._id === userId);
   return participant?.role || null;
+};
+export const selectIsHost = (state) => {
+  if (!state.rooms.currentRoom || !state.auth.user) return false;
+  return state.rooms.currentRoom.host?._id === state.auth.user._id;
+};
+export const selectIsModerator = (state) => {
+  if (!state.rooms.currentRoom || !state.auth.user) return false;
+  return state.rooms.currentRoom.moderators?.includes(state.auth.user._id) || 
+         state.rooms.currentRoom.host?._id === state.auth.user._id;
 };
 
 // Actions
 export const { 
   clearCurrentRoom, 
-  clearError, 
+  clearError,
+  clearSuccessMessage,
   setFilters, 
   resetFilters,
   userJoined,
   userLeft,
   participantRoleUpdated,
   roomUpdated,
-  clearSocketEvents
+  clearSocketEvents,
+  resetRoomState
 } = roomSlice.actions;
 
 export default roomSlice.reducer;
