@@ -26,7 +26,7 @@ const Home = () => {
       <HowItWorksSection />
       <RoomCreationSection isAuthenticated={isAuthenticated} />
       <LiveVoiceSection />
-      <FeaturedRoomsSection />
+      {/* <FeaturedRoomsSection /> */}
       <BenefitsSection />
       <TestimonialsSection />
       <FAQSection />

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { Toaster } from 'react-hot-toast';
@@ -9,6 +9,7 @@ import Login from './pages/Login';
 import Rooms from './pages/Rooms';
 import RoomDetail from './pages/RoomDetail';
 import Profile from './pages/Profile';
+import VoicePractice from './pages/VoicePractice';
 
 // Components
 import Navbar from './components/layout/Navbar';
@@ -18,27 +19,38 @@ import AuthGuard from './components/auth/AuthGuard';
 // Store actions
 import { getCurrentUser } from './store/slices/authSlice';
 import authService from './services/authService';
-import VoicePractice from './pages/VoicePractice';
+import Spinner from './components/ui/Spinner';
 
 function App() {
   const dispatch = useDispatch();
+  const [isLoading, setIsLoading] = useState(true);
   const { isAuthenticated } = useSelector((state) => state.auth);
 
   useEffect(() => {
-    // Check if user is authenticated on app load
     const checkAuth = async () => {
       try {
         const result = await authService.checkAuth();
         if (result.isAuthenticated) {
-          dispatch(getCurrentUser());
+          await dispatch(getCurrentUser()).unwrap();
         }
       } catch (error) {
         console.error('Auth check failed:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
     
     checkAuth();
   }, [dispatch]);
+
+  // Show loading spinner while checking auth
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
 
   return (
     <Router>
@@ -46,6 +58,7 @@ function App() {
         <Navbar />
         <main className="container mx-auto px-4 py-8">
           <Routes>
+            {/* Public Routes */}
             <Route path="/" element={<Home />} />
             <Route 
               path="/login" 
@@ -55,16 +68,18 @@ function App() {
                 </AuthGuard>
               } 
             />
+            <Route path="/rooms" element={<Rooms />} />
+
+            {/* Protected Routes */}
             <Route 
-              path="/login" 
+              path="/voice-practice" 
               element={
-                <AuthGuard requireAuth={false}>
-                  <Login />
-                </AuthGuard>
+                <PrivateRoute>
+                  <VoicePractice />
+                </PrivateRoute>
               } 
             />
-            <Route path="/voice-practice" element={<VoicePractice />} />
-            <Route path="/rooms" element={<Rooms />} />
+            
             <Route 
               path="/room/:id" 
               element={
@@ -73,10 +88,38 @@ function App() {
                 </PrivateRoute>
               } 
             />
-            <Route path="/profile/:id" element={<Profile />} />
+            
+            <Route 
+              path="/profile/:id" 
+              element={
+                <PrivateRoute>
+                  <Profile />
+                </PrivateRoute>
+              } 
+            />
+
+            {/* Catch all - 404 */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
-        <Toaster position="top-right" />
+        <Toaster 
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: '#363636',
+              color: '#fff',
+            },
+            success: {
+              duration: 3000,
+              icon: '🎉',
+            },
+            error: {
+              duration: 4000,
+              icon: '❌',
+            },
+          }}
+        />
       </div>
     </Router>
   );
